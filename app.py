@@ -31,7 +31,7 @@ get_price = st.cache_data(ttl=60 * 30)(dz.get_price)
 # ── 사이드바: 검색 & 옵션 ────────────────────────────────────
 with st.sidebar:
     st.header("🔍 종목 검색")
-    query = st.text_input("기업명 또는 종목코드", value="디아이")
+    query = st.text_input("기업명 또는 종목코드", value="003160")
     window = st.number_input("이동평균 기간(일)", min_value=5, max_value=240, value=50, step=5)
     period_label = st.selectbox("표시 기간", ["3M", "6M", "1Y", "2Y", "5Y"], index=3)
     adaptive = st.checkbox("종목별 보정 임계값 사용", value=True,
@@ -117,7 +117,7 @@ st.plotly_chart(fig2, use_container_width=True)
 
 # ── 최근 기록 표 ─────────────────────────────────────────────
 st.subheader("최근 기록")
-tbl = view.tail(15).iloc[::-1].copy()
+tbl = view.tail(60).iloc[::-1].copy()
 tbl.index = tbl.index.strftime("%Y-%m-%d")
 tbl = tbl.rename(columns={"Close": "종가", ma_col: f"{int(window)}일선",
                           "Disparity": "이격도", "Zone": "구간"})
