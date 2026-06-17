@@ -9,6 +9,7 @@ disparity.py
 
 from __future__ import annotations
 import datetime as dt
+import os
 import pandas as pd
 import FinanceDataReader as fdr
 
@@ -18,16 +19,33 @@ import FinanceDataReader as fdr
 # ──────────────────────────────────────────────────────────────
 _LISTING_CACHE: pd.DataFrame | None = None
 
+# 저장소에 함께 올려둔 종목목록 CSV (Code, Name, Market).
+# 클라우드(Streamlit Cloud 등)에서는 data.krx.co.kr 접근이 막히는 경우가 많아
+# 실시간 fdr.StockListing("KRX") 가 실패한다. 그래서 이 파일을 우선 사용한다.
+_LISTING_CSV = os.path.join(os.path.dirname(os.path.abspath(__file__)), "krx_listing.csv")
+
 
 def load_listing() -> pd.DataFrame:
-    """KRX(코스피+코스닥) 전체 상장종목 목록을 불러온다. (Code, Name, Market ...)"""
+    """
+    KRX(코스피+코스닥) 상장종목 목록을 반환한다. (Code, Name, Market)
+    1순위: 저장소의 krx_listing.csv (네트워크 불필요 → 클라우드에서도 안전)
+    2순위: 파일이 없으면 실시간 fdr.StockListing (로컬 개발용 폴백)
+    """
     global _LISTING_CACHE
-    if _LISTING_CACHE is None:
+    if _LISTING_CACHE is not None:
+        return _LISTING_CACHE
+
+    if os.path.exists(_LISTING_CSV):
+        df = pd.read_csv(_LISTING_CSV, dtype={"Code": str})
+        df["Code"] = df["Code"].str.zfill(6)
+    else:
+        # 로컬 폴백 (KRX 접근이 되는 환경에서만 성공)
         df = fdr.StockListing("KRX")
-        # 컬럼명이 버전에 따라 'Symbol' 또는 'Code' 로 다를 수 있어 표준화
         if "Code" not in df.columns and "Symbol" in df.columns:
             df = df.rename(columns={"Symbol": "Code"})
-        _LISTING_CACHE = df
+        df["Code"] = df["Code"].astype(str).str.zfill(6)
+
+    _LISTING_CACHE = df
     return _LISTING_CACHE
 
 
